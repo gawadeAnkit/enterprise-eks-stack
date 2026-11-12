@@ -29,6 +29,30 @@
             padding: 32px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
+        .arch-callout {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid #38bdf8;
+            border-left: 4px solid #38bdf8;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .arch-callout-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #38bdf8;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .arch-callout-body {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
         .metric-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -77,7 +101,7 @@
             border-radius: 8px;
             text-decoration: none !important;
             display: inline-block;
-            margin-top: 20px;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -100,6 +124,17 @@
                 </div>
             </div>
 
+            <!-- In-App Architecture Explanation Card -->
+            <div class="arch-callout">
+                <div class="arch-callout-header">
+                    <i class="fa fa-info-circle"></i>
+                    <span>HOW THIS WORKS &bull; ASYNCHRONOUS MESSAGE BROKER (RABBITMQ 3.13)</span>
+                </div>
+                <div class="arch-callout-body">
+                    The application establishes an <strong>AMQP 0-9-1 connection to RabbitMQ on port 5672</strong>. When asynchronous tasks are initiated, messages are dispatched to dynamic exchanges and durable queues, decoupling background jobs from the user-facing web tier and maintaining instantaneous response times.
+                </div>
+            </div>
+
             <div class="metric-grid">
                 <div class="stat-box">
                     <div class="stat-num"><%= connections %></div>
@@ -119,8 +154,8 @@
                 </div>
             </div>
 
-            <div style="background:#111827; border:1px solid #1e293b; border-radius:10px; padding:20px; margin-top:20px;">
-                <h4 style="margin:0 0 10px; color:#38bdf8; font-weight:700;"><i class="fa fa-info-circle"></i> Broker Orchestration Details</h4>
+            <div style="background:#111827; border:1px solid #1e293b; border-radius:10px; padding:20px; margin-top:16px;">
+                <h4 style="margin:0 0 10px; color:#38bdf8; font-weight:700;"><i class="fa fa-cubes"></i> Broker Orchestration Details</h4>
                 <p style="color:#cbd5e1; font-size:0.88rem; line-height:1.6; margin:0;">
                     Message broker service <code>enterprise-rmq</code> (RabbitMQ 3.13) provides decoupled asynchronous message processing for worker queues across worker nodes in <code>us-east-1</code>.
                 </p>

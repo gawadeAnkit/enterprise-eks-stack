@@ -54,11 +54,35 @@
             padding: 30px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
+        .arch-callout {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid #38bdf8;
+            border-left: 4px solid #38bdf8;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .arch-callout-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #38bdf8;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .arch-callout-body {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
         .table-custom {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
-            margin-top: 20px;
+            margin-top: 16px;
             border: 1px solid #1e293b;
             border-radius: 8px;
             overflow: hidden;
@@ -149,12 +173,23 @@
                 </div>
             </div>
 
+            <!-- In-App Architecture Explanation Card -->
+            <div class="arch-callout">
+                <div class="arch-callout-header">
+                    <i class="fa fa-database"></i>
+                    <span>HOW THIS WORKS &bull; RELATIONAL DATABASE TIER (MYSQL 8.0) & CACHE ENTRY</span>
+                </div>
+                <div class="arch-callout-body">
+                    This directory queries the <strong>MySQL 8.0 cluster (`enterprise-db` on port 3306)</strong> using Spring Data JPA. Click <strong>"Inspect Record"</strong> on any user below to observe the <strong>Memcached (port 11211) cache-aside pattern</strong> serving data directly from RAM.
+                </div>
+            </div>
+
             <table class="table-custom">
                 <thead>
                     <tr>
                         <th style="width: 120px;">Record ID</th>
                         <th>User Identifier</th>
-                        <th style="width: 140px; text-align: center;">Actions</th>
+                        <th style="width: 180px; text-align: center;">Actions</th>
                     </tr>
                 </thead>
                 <tbody>

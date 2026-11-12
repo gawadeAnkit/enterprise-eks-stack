@@ -131,14 +131,18 @@
                     </div>
                 </div>
 
-                <div class="flex-col-c p-t-155">
-                    <span class="txt1 p-b-17">
+                <div class="flex-col-c p-t-35">
+                    <span class="txt1 p-b-9">
                         Don't have an account?
                     </span>
 
                     <a href="${contextPath}/registration" class="txt2">
                         Sign Up
                     </a>
+                </div>
+
+                <div style="margin-top: 28px; padding: 12px 16px; background: rgba(15, 23, 42, 0.95); border: 1px solid #1e293b; border-left: 3px solid #38bdf8; border-radius: 8px; font-size: 0.78rem; color: #94a3b8; line-height: 1.5; text-align: left;">
+                    <strong style="color: #38bdf8;"><i class="fa fa-shield"></i> Ingress Security (Nginx 1.27):</strong> Traffic terminates at a hardened reverse proxy enforcing security headers (<code>X-Frame-Options: SAMEORIGIN</code>, <code>X-Content-Type-Options: nosniff</code>) before proxying upstream to Tomcat on port 8080.
                 </div>
             </form>
         </div>

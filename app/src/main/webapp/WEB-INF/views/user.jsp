@@ -54,11 +54,45 @@
             padding: 30px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
         }
+        .arch-callout {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+            border: 1px solid #38bdf8;
+            border-left: 4px solid #38bdf8;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .arch-callout-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #38bdf8;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .arch-callout-body {
+            color: #cbd5e1;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        .live-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
         .data-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 16px;
-            margin-top: 24px;
+            margin-top: 20px;
         }
         @media (max-width: 768px) {
             .data-grid { grid-template-columns: 1fr; }
@@ -133,6 +167,31 @@
                 <div>
                     <a href="${contextPath}/users" class="btn-back-dir"><i class="fa fa-arrow-left"></i> Directory</a>
                     <a href="${contextPath}/welcome" class="btn-back-dash"><i class="fa fa-dashboard"></i> Dashboard</a>
+                </div>
+            </div>
+
+            <!-- In-App Architecture Explanation Card -->
+            <div class="arch-callout">
+                <div class="arch-callout-header">
+                    <i class="fa fa-info-circle"></i>
+                    <span>HOW THIS WORKS &bull; CACHE-ASIDE PATTERN (MEMCACHED + MYSQL)</span>
+                    <span style="margin-left: auto;">
+                        <c:choose>
+                            <c:when test="${Result != null && Result.contains('Cache')}">
+                                <span class="live-pill" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399;">
+                                    <i class="fa fa-bolt"></i> SERVED FROM RAM (MEMCACHED :11211)
+                                </span>
+                            </c:when>
+                            <c:otherwise>
+                                <span class="live-pill" style="background: rgba(56, 189, 248, 0.2); border: 1px solid #38bdf8; color: #38bdf8;">
+                                    <i class="fa fa-database"></i> FETCHED FROM MYSQL & CACHED
+                                </span>
+                            </c:otherwise>
+                        </c:choose>
+                    </span>
+                </div>
+                <div class="arch-callout-body">
+                    The application implements a <strong>cache-aside pattern using Memcached on port 11211</strong>. On the first lookup, data is fetched from <strong>MySQL on port 3306</strong> and stored in Memcached RAM. Subsequent queries are served directly from RAM in sub-milliseconds without touching the database.
                 </div>
             </div>
 

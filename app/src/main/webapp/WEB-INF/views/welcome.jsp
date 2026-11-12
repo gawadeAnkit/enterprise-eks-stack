@@ -360,21 +360,25 @@
                     <div class="metric-label">Tomcat Webapp</div>
                     <div class="metric-val">2 Replicas</div>
                     <div class="metric-sub"><i class="fa fa-check-circle"></i> High Availability</div>
+                    <div style="font-size: 0.76rem; color: #94a3b8; margin-top: 8px; line-height: 1.4;">Load-balanced by Nginx reverse proxy. InitContainers enforce DB &amp; Cache readiness.</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">MySQL 8.0</div>
                     <div class="metric-val">Connected</div>
                     <div class="metric-sub"><i class="fa fa-database"></i> Port 3306 Ready</div>
+                    <div style="font-size: 0.76rem; color: #94a3b8; margin-top: 8px; line-height: 1.4;">Relational store for user auth &amp; directory. Credentials injected via K8s Secrets.</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Memcached 1.6</div>
                     <div class="metric-val">Active</div>
                     <div class="metric-sub"><i class="fa fa-bolt"></i> Port 11211 Cached</div>
+                    <div style="font-size: 0.76rem; color: #94a3b8; margin-top: 8px; line-height: 1.4;">In-memory cache-aside store serving repeated queries in sub-ms from RAM.</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">RabbitMQ 3.13</div>
                     <div class="metric-val">Ready</div>
                     <div class="metric-sub"><i class="fa fa-envelope"></i> Port 5672 AMQP</div>
+                    <div style="font-size: 0.76rem; color: #94a3b8; margin-top: 8px; line-height: 1.4;">Decoupled AMQP message broker offloading asynchronous background tasks.</div>
                 </div>
             </div>
 
