@@ -3,7 +3,7 @@ package com.visualpathit.account.model;
 import jakarta.persistence.*;
 
 import java.util.Set;
-/**{@author imrant} !*/
+/**{@author gawadeAnkit} !*/
 @Entity
 @Table(name = "role")
 public class Role {
