@@ -63,16 +63,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Debug OIDC JWT Token
-        run: |
-          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
-            echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN is NOT SET! id-token permission is disabled in repo settings!"
-          else
-            echo "Requesting ID token from GitHub OIDC provider..."
-            TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
-            python3 -c "import json, base64, sys; parts = sys.argv[1].split('.'); print('Token Header:', json.loads(base64.b64decode(parts[0] + '===').decode('utf-8'))); print('Token Payload:', json.dumps(json.loads(base64.b64decode(parts[1] + '===').decode('utf-8')), indent=2))" "$TOKEN"
-          fi
-
       - name: Configure AWS Credentials via OIDC (Zero Static Keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -143,16 +133,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Debug OIDC JWT Token
-        run: |
-          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
-            echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN is NOT SET! id-token permission is disabled in repo settings!"
-          else
-            echo "Requesting ID token from GitHub OIDC provider..."
-            TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
-            python3 -c "import json, base64, sys; parts = sys.argv[1].split('.'); print('Token Header:', json.loads(base64.b64decode(parts[0] + '===').decode('utf-8'))); print('Token Payload:', json.dumps(json.loads(base64.b64decode(parts[1] + '===').decode('utf-8')), indent=2))" "$TOKEN"
-          fi
 
       - name: Configure AWS Credentials via OIDC (Zero Static Keys)
         uses: aws-actions/configure-aws-credentials@v4
