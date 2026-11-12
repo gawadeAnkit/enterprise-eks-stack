@@ -249,6 +249,106 @@
             font-size: 0.9rem;
             line-height: 1.6;
         }
+
+        /* Floating Bottom-Left Theme Switcher */
+        .theme-switcher-fab {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            z-index: 99999;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+            transition: all 0.25s ease;
+            user-select: none;
+        }
+        .theme-switcher-fab:hover {
+            color: #38bdf8;
+            border-color: #38bdf8;
+            box-shadow: 0 8px 25px rgba(56, 189, 248, 0.25);
+            transform: translateY(-2px);
+        }
+
+        /* Light Theme Overrides */
+        body.light-theme {
+            background: #f1f5f9;
+            color: #0f172a;
+        }
+        body.light-theme .navbar-custom {
+            background: rgba(255, 255, 255, 0.95);
+            border-bottom: 1px solid #cbd5e1;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        body.light-theme .navbar-brand {
+            color: #0284c7 !important;
+        }
+        body.light-theme .navbar-nav > li > a {
+            color: #475569 !important;
+        }
+        body.light-theme .navbar-nav > li > a:hover {
+            color: #0284c7 !important;
+        }
+        body.light-theme .card-custom {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+        }
+        body.light-theme .profile-name {
+            color: #0f172a;
+        }
+        body.light-theme .profile-title {
+            color: #0284c7;
+        }
+        body.light-theme .profile-meta-row {
+            border-bottom-color: #e2e8f0;
+        }
+        body.light-theme .profile-meta-label {
+            color: #64748b;
+        }
+        body.light-theme .profile-meta-val {
+            color: #0f172a;
+        }
+        body.light-theme .metric-card {
+            background: #ffffff;
+            border-color: #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        body.light-theme .metric-label {
+            color: #64748b;
+        }
+        body.light-theme .metric-val {
+            color: #0f172a;
+        }
+        body.light-theme .arch-card {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+        body.light-theme .arch-desc {
+            color: #475569;
+        }
+        body.light-theme .arch-desc strong, body.light-theme .arch-desc code {
+            color: #0f172a;
+        }
+        body.light-theme .theme-switcher-fab {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: #cbd5e1;
+            color: #334155;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+        body.light-theme .theme-switcher-fab:hover {
+            color: #0284c7;
+            border-color: #0284c7;
+        }
     </style>
 </head>
 <body>
@@ -424,6 +524,38 @@
         </div>
     </div>
 </div>
+
+<!-- Floating Theme Switcher Button in Bottom-Left -->
+<div class="theme-switcher-fab" onclick="toggleTheme()" id="themeSwitcher" title="Toggle Theme (Dark / Light)">
+    <i id="themeIcon" class="fa fa-sun-o"></i>
+    <span id="themeLabel">Light Mode</span>
+</div>
+
+<script>
+    function applyTheme(theme) {
+        var icon = document.getElementById('themeIcon');
+        var label = document.getElementById('themeLabel');
+        if (theme === 'light') {
+            document.body.classList.add('light-theme');
+            if (icon) icon.className = 'fa fa-moon-o';
+            if (label) label.textContent = 'Dark Mode';
+        } else {
+            document.body.classList.remove('light-theme');
+            if (icon) icon.className = 'fa fa-sun-o';
+            if (label) label.textContent = 'Light Mode';
+        }
+    }
+    function toggleTheme() {
+        var isLight = document.body.classList.contains('light-theme');
+        var target = isLight ? 'dark' : 'light';
+        localStorage.setItem('portal_theme', target);
+        applyTheme(target);
+    }
+    (function() {
+        var saved = localStorage.getItem('portal_theme') || 'dark';
+        applyTheme(saved);
+    })();
+</script>
 
 </body>
 </html>
