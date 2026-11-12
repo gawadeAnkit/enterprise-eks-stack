@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  id-token: write   # Required for requesting the OIDC JWT token
+  contents: read    # Required for actions/checkout
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +17,7 @@ concurrency:
 
 env:
   AWS_REGION:        us-east-1
+  OIDC_ROLE_ARN:     arn:aws:iam::851706351853:role/github-actions-eks-deploy-role
   EKS_CLUSTER_NAME:  enterprise-eks-cluster
   K8S_NAMESPACE:     enterprise-stack
   ECR_WEBAPP:        enterprise-webapp
@@ -58,12 +60,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials via OIDC (Zero Static Keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume:        ${{ env.OIDC_ROLE_ARN }}
           aws-region:            ${{ env.AWS_REGION }}
+          audience:              sts.amazonaws.com
 
       - name: Log in to Amazon ECR
         id: ecr-login
@@ -126,12 +128,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials via OIDC (Zero Static Keys)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume:        ${{ env.OIDC_ROLE_ARN }}
           aws-region:            ${{ env.AWS_REGION }}
+          audience:              sts.amazonaws.com
 
       - name: Log in to Amazon ECR
         id: ecr-login
