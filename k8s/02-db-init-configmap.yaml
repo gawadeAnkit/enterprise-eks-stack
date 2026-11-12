@@ -35,7 +35,7 @@ data:
     DEFAULT NULL,\r\n  PRIMARY KEY (`id`)\r\n) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT
     CHARSET=utf8;\r\n/*!40101 SET character_set_client = @saved_cs_client */;\r\n\r\n--\r\n--
     Dumping data for table `user`\r\n--\r\n\r\nLOCK TABLES `user` WRITE;\r\n/*!40000
-    ALTER TABLE `user` DISABLE KEYS */;\r\n\r\nINSERT INTO `user` VALUES (7,'admin_vp','admin@hkhinfo.com',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'$2a$11$0a7VdTr4rfCQqtsvpng6GuJnzUmQ7gZiHXgzGPgm5hkRa3avXgBLK')\r\n,(8,'Abrar
+    ALTER TABLE `user` DISABLE KEYS */;\r\n\r\nINSERT INTO `user` VALUES (7,'admin_vp','ankit.devops@enterprise.cloud',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'$2a$11$0a7VdTr4rfCQqtsvpng6GuJnzUmQ7gZiHXgzGPgm5hkRa3avXgBLK')\r\n,(8,'Abrar
     Nirban','abrar.nirban74@gmail.com',NULL,NULL,'27/01/2002','A nirban','T nirban','male','unMarried','Dubai,UAE','Dubai,UAE','Software
     Engineer','Software Engineer','Java HTML CSS ','8888888888','8888888888','Indian','english','2
     ','$2a$11$UgG9TkHcgl02LxlqxRHYhOf7Xv4CxFmFEgS0FpUdk42OeslI.6JAW'),\r\n(9,'Amayra

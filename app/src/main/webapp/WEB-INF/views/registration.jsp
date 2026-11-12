@@ -57,7 +57,10 @@
 <body>
     <!-- Navbar -->
     <nav class="navbar navbar-custom navbar-expand-lg navbar-light">
-        <a class="navbar-brand" href="${contextPath}/">HKH Infotech</a>
+        <a class="navbar-brand" href="${contextPath}/" style="color: #38bdf8; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <img src="${contextPath}/resources/Images/user/logo.png" width="28" height="28" style="border-radius: 6px;">
+            Enterprise CloudOps Portal
+        </a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>

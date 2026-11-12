@@ -72,7 +72,10 @@
                         <span class="icon-bar"></span>
                         <span class="icon-bar"></span>
                     </button>
-                    <a class="navbar-brand" href="${contextPath}/index">HKH Infotech</a>
+                    <a class="navbar-brand" href="${contextPath}/index" style="color: #38bdf8; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        <img src="${contextPath}/resources/Images/user/logo.png" width="28" height="28" style="border-radius: 6px;">
+                        Enterprise CloudOps Portal
+                    </a>
                 </div>
                 <div class="collapse navbar-collapse" id="navbarCollapse">
                     <ul class="nav navbar-nav navbar-right">
