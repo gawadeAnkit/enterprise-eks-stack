@@ -29,14 +29,15 @@ env:
 jobs:
   # ═══════════════════════════════════════════════════════════════════
   # Phase 1-A — Java Application CI
-  #   ✔ Maven unit tests (JUnit 4 + JUnit 5)
+  #   ✔ Maven unit tests (JUnit 4 + JUnit 5 via Surefire)
   #   ✔ JaCoCo code-coverage report
+  #   ✔ Standard Maven Build (mvn package -> vprofile-v2.war)
+  #   ✔ Upload WAR artifact (enterprise-webapp-war)
   #   ✔ Checkstyle code-quality gate
   #   ✔ OWASP Dependency-Check (CVE scan on JAR dependencies)
-  #   ✔ Upload test + coverage artifacts
   # ═══════════════════════════════════════════════════════════════════
   test-java-app:
-    name: Java App — Unit Tests, Coverage & Code Quality
+    name: Java App — Test, Maven Build & Quality Gates
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -73,6 +74,18 @@ jobs:
           name: java-jacoco-coverage
           path: app/target/site/jacoco/
           if-no-files-found: ignore
+          retention-days: 14
+
+      # ── Maven Build Stage (Standard Package WAR) ───────────────────
+      - name: Maven Build — Compile & Package WAR (mvn package)
+        run: mvn package -DskipTests=true --batch-mode
+
+      - name: Upload Packaged Application WAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-webapp-war
+          path: app/target/*.war
+          if-no-files-found: error
           retention-days: 14
 
       # ── Checkstyle Code Quality ────────────────────────────────────
