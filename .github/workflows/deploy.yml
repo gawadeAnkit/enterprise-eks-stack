@@ -320,7 +320,7 @@ jobs:
           echo "Waiting for RabbitMQ..."
           kubectl rollout status deployment/enterprise-rmq   -n ${{ env.K8S_NAMESPACE }} --timeout=180s
           echo "Waiting for WebApp..."
-          kubectl rollout status deployment/enterprise-app   -n ${{ env.K8S_NAMESPACE }} --timeout=300s
+          kubectl rollout status deployment/enterprise-webapp -n ${{ env.K8S_NAMESPACE }} --timeout=300s
           echo "Waiting for Proxy..."
           kubectl rollout status deployment/enterprise-proxy -n ${{ env.K8S_NAMESPACE }} --timeout=180s
           echo "Waiting for Dashboard..."
