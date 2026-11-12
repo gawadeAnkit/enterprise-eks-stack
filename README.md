@@ -491,10 +491,10 @@ Task-Vprofile-EKS/
 
 ## 11. Author & Evaluation Panel Sign-Off
 
-- **Lead Cloud & Senior DevOps Engineer**: Ankit Gawade (`gawadeAnkit`)
+- **Cloud & DevOps Engineer**: Ankit Gawade (`gawadeAnkit`)
 - **Email**: [ankitgawade1234@gmail.com](mailto:ankitgawade1234@gmail.com)
 - **Target Organization**: Itvedant Education Pvt. Ltd.
 - **Cloud Infrastructure**: Amazon Web Services (AWS)
 - **Region**: `us-east-1` (US East - N. Virginia)
 - **Cluster Version**: Kubernetes v1.31 (EKS Managed Control Plane)
-- **Assessment Submission Document**: `Senior_DevOps_Engineer_Assessment_Submission_Ankit_Gawade.pdf`
+- **Assessment Submission Document**: `DevOps_Engineer_Assessment_Submission_Ankit_Gawade.pdf`
