@@ -7,9 +7,10 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+# Top-level permissions (read-only by default; jobs that need id-token override below)
 permissions:
-  id-token: write   # Required for requesting the OIDC JWT token
-  contents: read    # Required for actions/checkout
+  contents: read
+  security-events: write   # Required for uploading Trivy SARIF to GitHub Security tab
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,11 +24,94 @@ env:
   ECR_WEBAPP:        enterprise-webapp
   ECR_PROXY:         enterprise-proxy
   ECR_DASHBOARD:     devops-dashboard
+  JAVA_VERSION:      "17"
 
 jobs:
-  # ═══════════════════════════════════════════════════════════════
-  # Phase 1 — Continuous Integration (Tests & Syntax Check)
-  # ═══════════════════════════════════════════════════════════════
+  # ═══════════════════════════════════════════════════════════════════
+  # Phase 1-A — Java Application CI
+  #   ✔ Maven unit tests (JUnit 4 + JUnit 5)
+  #   ✔ JaCoCo code-coverage report
+  #   ✔ Checkstyle code-quality gate
+  #   ✔ OWASP Dependency-Check (CVE scan on JAR dependencies)
+  #   ✔ Upload test + coverage artifacts
+  # ═══════════════════════════════════════════════════════════════════
+  test-java-app:
+    name: Java App — Unit Tests, Coverage & Code Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }} (Amazon Corretto)
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: corretto
+          cache: maven
+
+      # ── Unit Tests + JaCoCo Coverage ──────────────────────────────
+      - name: Run Unit Tests (Maven Surefire + JaCoCo)
+        run: mvn clean test jacoco:report --batch-mode -Dmaven.test.failure.ignore=false
+
+      - name: Upload Surefire Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-surefire-reports
+          path: app/target/surefire-reports/
+          retention-days: 14
+
+      - name: Upload JaCoCo Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-jacoco-coverage
+          path: app/target/site/jacoco/
+          retention-days: 14
+
+      # ── Checkstyle Code Quality ────────────────────────────────────
+      - name: Checkstyle — Code Style Analysis
+        run: mvn checkstyle:checkstyle --batch-mode
+        continue-on-error: true   # Report violations; don't block on style (warning-level)
+
+      - name: Upload Checkstyle Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-checkstyle-report
+          path: app/target/checkstyle-result.xml
+          retention-days: 14
+
+      # ── OWASP Dependency-Check (JAR CVE audit) ────────────────────
+      - name: OWASP Dependency-Check (CVE Scan on Dependencies)
+        run: |
+          mvn org.owasp:dependency-check-maven:9.0.9:check \
+            --batch-mode \
+            -DfailBuildOnCVSS=9 \
+            -DsuppressionFile="" \
+            -Dformat=HTML \
+            -DassemblyAnalyzerEnabled=false \
+            -DnvdApiDelay=4000 \
+            || echo "OWASP scan completed — review report artifact"
+        continue-on-error: true   # Don't block pipeline; treat as advisory
+
+      - name: Upload OWASP Dependency-Check Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-owasp-dependency-check
+          path: app/target/dependency-check-report.html
+          retention-days: 14
+
+  # ═══════════════════════════════════════════════════════════════════
+  # Phase 1-B — Node.js Dashboard CI
+  #   ✔ Syntax check
+  #   ✔ npm unit tests
+  # ═══════════════════════════════════════════════════════════════════
   test-dashboard:
     name: Dashboard — Unit Tests & Syntax Check
     runs-on: ubuntu-latest
@@ -36,93 +120,162 @@ jobs:
         working-directory: dashboard
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
 
-      - name: Syntax Check
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Syntax Check — server.js
         run: node --check src/server.js
 
-      - name: Run Tests
+      - name: Run Dashboard Unit Tests
         run: npm test
 
-  # ═══════════════════════════════════════════════════════════════
-  # Phase 2 — Build, Scan & Push All Images to Amazon ECR
-  # ═══════════════════════════════════════════════════════════════
+  # ═══════════════════════════════════════════════════════════════════
+  # Phase 2 — Build, Security Scan (Trivy) & Push to Amazon ECR
+  #
+  #   ✔ Runs ONLY on main branch push (not on PRs)
+  #   ✔ Requires BOTH Phase 1 jobs to pass first
+  #   ✔ Trivy scans ALL 3 images — exit-code '1' = HARD BLOCKING GATE
+  #   ✔ SARIF reports uploaded to GitHub Security tab
+  #   ✔ Images pushed to ECR only after all scans pass
+  # ═══════════════════════════════════════════════════════════════════
   build-and-push:
-    name: Build Multi-Tier Containers & Push to ECR
-    needs: [test-dashboard]
+    name: Build, Trivy CVE Scan & Push All Images to ECR
+    needs: [test-java-app, test-dashboard]
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
+      security-events: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials via OIDC (Zero Static Keys)
+      # ── AWS Auth via OIDC (Zero static keys) ──────────────────────
+      - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume:        ${{ env.OIDC_ROLE_ARN }}
-          aws-region:            ${{ env.AWS_REGION }}
-          audience:              sts.amazonaws.com
+          role-to-assume:    ${{ env.OIDC_ROLE_ARN }}
+          aws-region:        ${{ env.AWS_REGION }}
+          audience:          sts.amazonaws.com
 
       - name: Log in to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Set image metadata
+      # ── Set image tags ─────────────────────────────────────────────
+      - name: Set image metadata (registry + short SHA tag)
         run: |
           REGISTRY="${{ steps.ecr-login.outputs.registry }}"
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "REGISTRY=$REGISTRY"             >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA"           >> $GITHUB_ENV
-          echo "WEBAPP_IMAGE=$REGISTRY/${{ env.ECR_WEBAPP }}:$SHORT_SHA"    >> $GITHUB_ENV
-          echo "PROXY_IMAGE=$REGISTRY/${{ env.ECR_PROXY }}:$SHORT_SHA"      >> $GITHUB_ENV
+          echo "WEBAPP_IMAGE=$REGISTRY/${{ env.ECR_WEBAPP }}:$SHORT_SHA"       >> $GITHUB_ENV
+          echo "PROXY_IMAGE=$REGISTRY/${{ env.ECR_PROXY }}:$SHORT_SHA"         >> $GITHUB_ENV
           echo "DASHBOARD_IMAGE=$REGISTRY/${{ env.ECR_DASHBOARD }}:$SHORT_SHA" >> $GITHUB_ENV
 
-      - name: Build — DevOps Dashboard
-        run: docker build -f docker/dashboard/Dockerfile -t $DASHBOARD_IMAGE -t $REGISTRY/${{ env.ECR_DASHBOARD }}:latest .
-
-      - name: Build — Nginx Proxy
-        run: docker build -f docker/proxy/Dockerfile -t $PROXY_IMAGE -t $REGISTRY/${{ env.ECR_PROXY }}:latest .
-
-      - name: Build — Enterprise WebApp (Tomcat / Java)
+      # ── Build all 3 images ─────────────────────────────────────────
+      - name: Build — Enterprise WebApp (Java / Tomcat)
         run: docker build -f docker/app/Dockerfile -t $WEBAPP_IMAGE -t $REGISTRY/${{ env.ECR_WEBAPP }}:latest .
 
-      - name: Security Scan — Dashboard (Trivy)
+      - name: Build — Nginx Reverse Proxy
+        run: docker build -f docker/proxy/Dockerfile -t $PROXY_IMAGE -t $REGISTRY/${{ env.ECR_PROXY }}:latest .
+
+      - name: Build — DevOps Dashboard (Node.js)
+        run: docker build -f docker/dashboard/Dockerfile -t $DASHBOARD_IMAGE -t $REGISTRY/${{ env.ECR_DASHBOARD }}:latest .
+
+      # ── Trivy CVE Scans — ALL 3 images, HARD BLOCKING GATE ────────
+      #    exit-code: '1' means the pipeline FAILS if CRITICAL or HIGH CVEs found
+      #    ignore-unfixed: true skips CVEs with no patch yet (fair gate)
+
+      - name: Security Scan — Enterprise WebApp (Trivy · BLOCKING)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.DASHBOARD_IMAGE }}
-          format: table
-          exit-code: '0'
-          severity: CRITICAL,HIGH
+          image-ref:      ${{ env.WEBAPP_IMAGE }}
+          format:         sarif
+          output:         trivy-webapp.sarif
+          exit-code:      '1'
+          severity:       CRITICAL,HIGH
           ignore-unfixed: true
 
-      - name: Security Scan — Proxy (Trivy)
+      - name: Upload WebApp Trivy SARIF → GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-webapp.sarif
+          category:   trivy-webapp
+
+      - name: Security Scan — Nginx Proxy (Trivy · BLOCKING)
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.PROXY_IMAGE }}
-          format: table
-          exit-code: '0'
-          severity: CRITICAL,HIGH
+          image-ref:      ${{ env.PROXY_IMAGE }}
+          format:         sarif
+          output:         trivy-proxy.sarif
+          exit-code:      '1'
+          severity:       CRITICAL,HIGH
           ignore-unfixed: true
 
+      - name: Upload Proxy Trivy SARIF → GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-proxy.sarif
+          category:   trivy-proxy
+
+      - name: Security Scan — DevOps Dashboard (Trivy · BLOCKING)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref:      ${{ env.DASHBOARD_IMAGE }}
+          format:         sarif
+          output:         trivy-dashboard.sarif
+          exit-code:      '1'
+          severity:       CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Upload Dashboard Trivy SARIF → GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-dashboard.sarif
+          category:   trivy-dashboard
+
+      # ── Push all images to ECR (only after ALL scans pass) ────────
       - name: Push all images to Amazon ECR
         run: |
-          docker push $DASHBOARD_IMAGE
-          docker push $REGISTRY/${{ env.ECR_DASHBOARD }}:latest
-          docker push $PROXY_IMAGE
-          docker push $REGISTRY/${{ env.ECR_PROXY }}:latest
+          echo "All 3 Trivy scans passed — pushing images to ECR..."
           docker push $WEBAPP_IMAGE
           docker push $REGISTRY/${{ env.ECR_WEBAPP }}:latest
+          docker push $PROXY_IMAGE
+          docker push $REGISTRY/${{ env.ECR_PROXY }}:latest
+          docker push $DASHBOARD_IMAGE
+          docker push $REGISTRY/${{ env.ECR_DASHBOARD }}:latest
 
-  # ═══════════════════════════════════════════════════════════════
+      - name: Image Summary
+        run: |
+          echo "════════════════════════════════════════════════════════"
+          echo "  Images successfully scanned and pushed to ECR"
+          echo "════════════════════════════════════════════════════════"
+          echo "  WebApp:    $WEBAPP_IMAGE"
+          echo "  Proxy:     $PROXY_IMAGE"
+          echo "  Dashboard: $DASHBOARD_IMAGE"
+          echo "════════════════════════════════════════════════════════"
+
+  # ═══════════════════════════════════════════════════════════════════
   # Phase 3 — Rolling Deploy to Amazon EKS
-  # ═══════════════════════════════════════════════════════════════
+  #   ✔ Runs only after build-and-push succeeds
+  #   ✔ kubectl rollout with health verification for all services
+  # ═══════════════════════════════════════════════════════════════════
   deploy:
     name: Deploy to Amazon EKS
     needs: build-and-push
@@ -132,14 +285,15 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials via OIDC (Zero Static Keys)
+      - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume:        ${{ env.OIDC_ROLE_ARN }}
-          aws-region:            ${{ env.AWS_REGION }}
-          audience:              sts.amazonaws.com
+          role-to-assume:    ${{ env.OIDC_ROLE_ARN }}
+          aws-region:        ${{ env.AWS_REGION }}
+          audience:          sts.amazonaws.com
 
       - name: Log in to Amazon ECR
         id: ecr-login
@@ -151,28 +305,28 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "REGISTRY=$REGISTRY"             >> $GITHUB_ENV
           echo "SHORT_SHA=$SHORT_SHA"           >> $GITHUB_ENV
-          echo "WEBAPP_IMAGE=$REGISTRY/${{ env.ECR_WEBAPP }}:$SHORT_SHA"    >> $GITHUB_ENV
-          echo "PROXY_IMAGE=$REGISTRY/${{ env.ECR_PROXY }}:$SHORT_SHA"      >> $GITHUB_ENV
+          echo "WEBAPP_IMAGE=$REGISTRY/${{ env.ECR_WEBAPP }}:$SHORT_SHA"       >> $GITHUB_ENV
+          echo "PROXY_IMAGE=$REGISTRY/${{ env.ECR_PROXY }}:$SHORT_SHA"         >> $GITHUB_ENV
           echo "DASHBOARD_IMAGE=$REGISTRY/${{ env.ECR_DASHBOARD }}:$SHORT_SHA" >> $GITHUB_ENV
 
       - name: Configure kubeconfig for EKS
         run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
 
-      - name: Apply namespace, config, and database init
+      - name: Apply namespace, secrets & configmaps
         run: |
           kubectl apply -f k8s/00-namespace.yaml
           kubectl apply -f k8s/01-secret.yaml
           kubectl apply -f k8s/02-configmap.yaml
           kubectl apply -f k8s/02-db-init-configmap.yaml
 
-      - name: Apply backing infrastructure (PVC, MySQL, Memcached, RabbitMQ)
+      - name: Apply backing infrastructure (MySQL, Memcached, RabbitMQ)
         run: |
           kubectl apply -f k8s/03-db-pvc.yaml
           kubectl apply -f k8s/04-db-deployment.yaml
           kubectl apply -f k8s/05-cache-deployment.yaml
           kubectl apply -f k8s/06-rmq-deployment.yaml
 
-      - name: Deploy Webapp, Proxy & Dashboard (with tag substitution)
+      - name: Deploy WebApp, Proxy & Dashboard (with image-tag substitution)
         run: |
           sed -i "s|<WEBAPP_IMAGE>|$WEBAPP_IMAGE|g"       k8s/07-webapp-deployment.yaml
           sed -i "s|<PROXY_IMAGE>|$PROXY_IMAGE|g"         k8s/08-proxy-deployment.yaml
@@ -183,24 +337,28 @@ jobs:
           kubectl apply -f k8s/08-proxy-deployment.yaml
           kubectl apply -f k8s/09-dashboard-deployment.yaml
 
-      - name: Verify rollouts
+      - name: Verify all rollouts healthy
         run: |
-          echo "Verifying Database rollout..."
-          kubectl rollout status deployment/enterprise-db -n ${{ env.K8S_NAMESPACE }} --timeout=180s
-          echo "Verifying Cache rollout..."
+          echo "Waiting for Database..."
+          kubectl rollout status deployment/enterprise-db    -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+          echo "Waiting for Memcached..."
           kubectl rollout status deployment/enterprise-cache -n ${{ env.K8S_NAMESPACE }} --timeout=120s
-          echo "Verifying RabbitMQ rollout..."
-          kubectl rollout status deployment/enterprise-rmq -n ${{ env.K8S_NAMESPACE }} --timeout=180s
-          echo "Verifying Dashboard rollout..."
-          kubectl rollout status deployment/devops-dashboard -n ${{ env.K8S_NAMESPACE }} --timeout=180s
-          echo "Verifying Proxy rollout..."
+          echo "Waiting for RabbitMQ..."
+          kubectl rollout status deployment/enterprise-rmq   -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+          echo "Waiting for WebApp..."
+          kubectl rollout status deployment/enterprise-app   -n ${{ env.K8S_NAMESPACE }} --timeout=300s
+          echo "Waiting for Proxy..."
           kubectl rollout status deployment/enterprise-proxy -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+          echo "Waiting for Dashboard..."
+          kubectl rollout status deployment/devops-dashboard -n ${{ env.K8S_NAMESPACE }} --timeout=180s
 
-      - name: Deployment Summary & Endpoints
+      - name: Deployment Summary & Live Endpoints
         run: |
-          echo "═══════════════════════════════════════════════════════════"
-          echo "                ENTERPRISE STACK DEPLOYED                  "
-          echo "═══════════════════════════════════════════════════════════"
+          echo "════════════════════════════════════════════════════════"
+          echo "              ENTERPRISE STACK DEPLOYED ✓               "
+          echo "  Commit: ${{ github.sha }}"
+          echo "  Tag:    ${GITHUB_SHA::7}"
+          echo "════════════════════════════════════════════════════════"
           kubectl get pods -n ${{ env.K8S_NAMESPACE }} -o wide
           echo ""
           echo "Public LoadBalancer Endpoints:"
