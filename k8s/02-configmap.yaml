@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enterprise-config
+  namespace: enterprise-stack
+data:
+  DB_HOST: "vprodb"
+  DB_PORT: "3306"
+  DB_NAME: "accounts"
+  DB_USER: "root"
+  CACHE_HOST: "vprocache01"
+  CACHE_PORT: "11211"
+  RMQ_HOST: "vpromq01"
+  RMQ_PORT: "5672"
+  RMQ_USER: "guest"

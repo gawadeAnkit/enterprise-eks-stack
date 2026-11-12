@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enterprise-proxy
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-proxy
+    tier: proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enterprise-proxy
+  template:
+    metadata:
+      labels:
+        app: enterprise-proxy
+        tier: proxy
+    spec:
+      containers:
+        - name: nginx
+          image: <PROXY_IMAGE>
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enterprise-proxy
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-proxy
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: enterprise-proxy
+

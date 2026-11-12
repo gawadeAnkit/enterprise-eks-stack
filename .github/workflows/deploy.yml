@@ -1,0 +1,199 @@
+name: Enterprise CI/CD — EKS Multi-Tier Deployment
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION:        us-east-1
+  EKS_CLUSTER_NAME:  enterprise-eks-cluster
+  K8S_NAMESPACE:     enterprise-stack
+  ECR_WEBAPP:        enterprise-webapp
+  ECR_PROXY:         enterprise-proxy
+  ECR_DASHBOARD:     devops-dashboard
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 1 — Continuous Integration (Tests & Syntax Check)
+  # ═══════════════════════════════════════════════════════════════
+  test-dashboard:
+    name: Dashboard — Unit Tests & Syntax Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Syntax Check
+        run: node --check src/server.js
+
+      - name: Run Tests
+        run: npm test
+
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 2 — Build, Scan & Push All Images to Amazon ECR
+  # ═══════════════════════════════════════════════════════════════
+  build-and-push:
+    name: Build Multi-Tier Containers & Push to ECR
+    needs: [test-dashboard]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image metadata
+        run: |
+          REGISTRY="${{ steps.ecr-login.outputs.registry }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "REGISTRY=$REGISTRY"             >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA"           >> $GITHUB_ENV
+          echo "WEBAPP_IMAGE=$REGISTRY/${{ env.ECR_WEBAPP }}:$SHORT_SHA"    >> $GITHUB_ENV
+          echo "PROXY_IMAGE=$REGISTRY/${{ env.ECR_PROXY }}:$SHORT_SHA"      >> $GITHUB_ENV
+          echo "DASHBOARD_IMAGE=$REGISTRY/${{ env.ECR_DASHBOARD }}:$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Build — DevOps Dashboard
+        run: docker build -f docker/dashboard/Dockerfile -t $DASHBOARD_IMAGE -t $REGISTRY/${{ env.ECR_DASHBOARD }}:latest .
+
+      - name: Build — Nginx Proxy
+        run: docker build -f docker/proxy/Dockerfile -t $PROXY_IMAGE -t $REGISTRY/${{ env.ECR_PROXY }}:latest .
+
+      - name: Build — Enterprise WebApp (Tomcat / Java)
+        run: docker build -f docker/app/Dockerfile -t $WEBAPP_IMAGE -t $REGISTRY/${{ env.ECR_WEBAPP }}:latest .
+
+      - name: Security Scan — Dashboard (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.DASHBOARD_IMAGE }}
+          format: table
+          exit-code: '0'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Security Scan — Proxy (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.PROXY_IMAGE }}
+          format: table
+          exit-code: '0'
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+
+      - name: Push all images to Amazon ECR
+        run: |
+          docker push $DASHBOARD_IMAGE
+          docker push $REGISTRY/${{ env.ECR_DASHBOARD }}:latest
+          docker push $PROXY_IMAGE
+          docker push $REGISTRY/${{ env.ECR_PROXY }}:latest
+          docker push $WEBAPP_IMAGE
+          docker push $REGISTRY/${{ env.ECR_WEBAPP }}:latest
+
+  # ═══════════════════════════════════════════════════════════════
+  # Phase 3 — Rolling Deploy to Amazon EKS
+  # ═══════════════════════════════════════════════════════════════
+  deploy:
+    name: Deploy to Amazon EKS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image metadata
+        run: |
+          REGISTRY="${{ steps.ecr-login.outputs.registry }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          echo "REGISTRY=$REGISTRY"             >> $GITHUB_ENV
+          echo "SHORT_SHA=$SHORT_SHA"           >> $GITHUB_ENV
+          echo "WEBAPP_IMAGE=$REGISTRY/${{ env.ECR_WEBAPP }}:$SHORT_SHA"    >> $GITHUB_ENV
+          echo "PROXY_IMAGE=$REGISTRY/${{ env.ECR_PROXY }}:$SHORT_SHA"      >> $GITHUB_ENV
+          echo "DASHBOARD_IMAGE=$REGISTRY/${{ env.ECR_DASHBOARD }}:$SHORT_SHA" >> $GITHUB_ENV
+
+      - name: Configure kubeconfig for EKS
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Apply namespace, config, and database init
+        run: |
+          kubectl apply -f k8s/00-namespace.yaml
+          kubectl apply -f k8s/01-secret.yaml
+          kubectl apply -f k8s/02-configmap.yaml
+          kubectl apply -f k8s/02-db-init-configmap.yaml
+
+      - name: Apply backing infrastructure (PVC, MySQL, Memcached, RabbitMQ)
+        run: |
+          kubectl apply -f k8s/03-db-pvc.yaml
+          kubectl apply -f k8s/04-db-deployment.yaml
+          kubectl apply -f k8s/05-cache-deployment.yaml
+          kubectl apply -f k8s/06-rmq-deployment.yaml
+
+      - name: Deploy Webapp, Proxy & Dashboard (with tag substitution)
+        run: |
+          sed -i "s|<WEBAPP_IMAGE>|$WEBAPP_IMAGE|g"       k8s/07-webapp-deployment.yaml
+          sed -i "s|<PROXY_IMAGE>|$PROXY_IMAGE|g"         k8s/08-proxy-deployment.yaml
+          sed -i "s|<DASHBOARD_IMAGE>|$DASHBOARD_IMAGE|g" k8s/09-dashboard-deployment.yaml
+          sed -i "s|<VERSION_PLACEHOLDER>|$SHORT_SHA|g"   k8s/09-dashboard-deployment.yaml
+
+          kubectl apply -f k8s/07-webapp-deployment.yaml
+          kubectl apply -f k8s/08-proxy-deployment.yaml
+          kubectl apply -f k8s/09-dashboard-deployment.yaml
+
+      - name: Verify rollouts
+        run: |
+          echo "Verifying Database rollout..."
+          kubectl rollout status deployment/enterprise-db -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+          echo "Verifying Cache rollout..."
+          kubectl rollout status deployment/enterprise-cache -n ${{ env.K8S_NAMESPACE }} --timeout=120s
+          echo "Verifying RabbitMQ rollout..."
+          kubectl rollout status deployment/enterprise-rmq -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+          echo "Verifying Dashboard rollout..."
+          kubectl rollout status deployment/devops-dashboard -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+          echo "Verifying Proxy rollout..."
+          kubectl rollout status deployment/enterprise-proxy -n ${{ env.K8S_NAMESPACE }} --timeout=180s
+
+      - name: Deployment Summary & Endpoints
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "                ENTERPRISE STACK DEPLOYED                  "
+          echo "═══════════════════════════════════════════════════════════"
+          kubectl get pods -n ${{ env.K8S_NAMESPACE }} -o wide
+          echo ""
+          echo "Public LoadBalancer Endpoints:"
+          kubectl get svc -n ${{ env.K8S_NAMESPACE }}

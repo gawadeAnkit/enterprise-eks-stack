@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enterprise-cache
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-cache
+    tier: cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enterprise-cache
+  template:
+    metadata:
+      labels:
+        app: enterprise-cache
+        tier: cache
+    spec:
+      containers:
+        - name: memcached
+          image: memcached:1.6-alpine
+          args: ["-m", "64"]
+          ports:
+            - containerPort: 11211
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          livenessProbe:
+            tcpSocket:
+              port: 11211
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: 11211
+            initialDelaySeconds: 5
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enterprise-cache
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-cache
+spec:
+  type: ClusterIP
+  ports:
+    - port: 11211
+      targetPort: 11211
+  selector:
+    app: enterprise-cache
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vprocache01
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-cache
+spec:
+  type: ClusterIP
+  ports:
+    - port: 11211
+      targetPort: 11211
+  selector:
+    app: enterprise-cache

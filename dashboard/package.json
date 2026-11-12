@@ -1,0 +1,13 @@
+{
+  "name": "devops-dashboard",
+  "version": "1.0.0",
+  "description": "Enterprise DevOps Platform Dashboard for EKS multi-tier stack",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/server.test.js"
+  },
+  "author": "gawadeAnkit",
+  "license": "MIT"
+}
+
