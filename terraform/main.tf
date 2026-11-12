@@ -36,12 +36,40 @@ resource "aws_ecr_lifecycle_policy" "repos" {
   for_each   = aws_ecr_repository.repos
   repository = each.value.name
   policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "Keep last 10 images"
-      selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 10 }
-      action       = { type = "expire" }
-    }]
+    rules = [
+      {
+        rulePriority = 1
+        description  = "Expire untagged orphaned images after 1 day"
+        selection = {
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 1
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 2
+        description  = "Retain last 30 release-tagged images (v*, build-*, sha-*)"
+        selection = {
+          tagStatus     = "tagged"
+          tagPrefixList = ["v", "build-", "sha-"]
+          countType     = "imageCountMoreThan"
+          countNumber   = 30
+        }
+        action = { type = "expire" }
+      },
+      {
+        rulePriority = 3
+        description  = "Safety cap: retain maximum 50 total images"
+        selection = {
+          tagStatus   = "any"
+          countType   = "imageCountMoreThan"
+          countNumber = 50
+        }
+        action = { type = "expire" }
+      }
+    ]
   })
 }
 
