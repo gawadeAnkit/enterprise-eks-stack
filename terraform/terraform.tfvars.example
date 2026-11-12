@@ -1,0 +1,36 @@
+# AWS Region
+aws_region = "us-east-1"
+
+# EKS Cluster Settings
+cluster_name    = "enterprise-eks-cluster"
+cluster_version = "1.31"
+
+# VPC Subnets (must span at least two Availability Zones)
+subnet_ids = [
+  "subnet-04d4cad19e559dc48",
+  "subnet-0c4d8a56e925ccd26",
+  "subnet-0e4d9e54a436644ad"
+]
+
+# EKS Worker Node Group
+node_group_name = "enterprise-workers"
+instance_types  = ["t3.medium"]
+capacity_type   = "ON_DEMAND"
+desired_size    = 2
+min_size        = 1
+max_size        = 4
+
+# ECR Container Repositories
+ecr_repos = [
+  "enterprise-webapp",
+  "enterprise-proxy",
+  "devops-dashboard"
+]
+
+# Common Resource Tags
+tags = {
+  Project     = "Enterprise-EKS-Stack"
+  Environment = "Production"
+  ManagedBy   = "Terraform"
+  Owner       = "gawadeAnkit"
+}

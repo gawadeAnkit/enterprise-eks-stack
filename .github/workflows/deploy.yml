@@ -310,6 +310,9 @@ jobs:
           kubectl apply -f k8s/07-webapp-deployment.yaml
           kubectl apply -f k8s/08-proxy-deployment.yaml
           kubectl apply -f k8s/09-dashboard-deployment.yaml
+          kubectl apply -f k8s/10-pdb.yaml
+          kubectl apply -f k8s/11-hpa.yaml
+          kubectl apply -f k8s/12-networkpolicy.yaml
 
       - name: Verify all rollouts healthy
         run: |

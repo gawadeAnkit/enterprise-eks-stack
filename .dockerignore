@@ -1,0 +1,34 @@
+# Git & CI/CD
+.git/
+.github/
+.gitignore
+
+# Terraform & State
+terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Documentation & Reports
+*.md
+*.pdf
+*.png
+screenshots/
+
+# Java build artifacts & temp
+app/target/
+target/
+.mvn/
+*.class
+
+# Node / Frontend temp
+node_modules/
+npm-debug.log*
+
+# IDE & OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

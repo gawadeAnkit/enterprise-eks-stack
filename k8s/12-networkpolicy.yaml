@@ -1,0 +1,93 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: enterprise-db-netpol
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-db
+    tier: database
+spec:
+  podSelector:
+    matchLabels:
+      app: enterprise-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: enterprise-webapp
+      ports:
+        - protocol: TCP
+          port: 3306
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: enterprise-cache-netpol
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-cache
+    tier: cache
+spec:
+  podSelector:
+    matchLabels:
+      app: enterprise-cache
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: enterprise-webapp
+      ports:
+        - protocol: TCP
+          port: 11211
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: enterprise-rmq-netpol
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-rmq
+    tier: messaging
+spec:
+  podSelector:
+    matchLabels:
+      app: enterprise-rmq
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: enterprise-webapp
+      ports:
+        - protocol: TCP
+          port: 5672
+        - protocol: TCP
+          port: 15672
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: enterprise-webapp-netpol
+  namespace: enterprise-stack
+  labels:
+    app: enterprise-webapp
+    tier: application
+spec:
+  podSelector:
+    matchLabels:
+      app: enterprise-webapp
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: enterprise-proxy
+      ports:
+        - protocol: TCP
+          port: 8080

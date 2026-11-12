@@ -46,18 +46,28 @@ flowchart TD
 
 ## Senior DevOps Best Practices Implemented
 
-1. **Persistent Storage with AWS EBS CSI Driver**:
-   - The MySQL database utilizes a Kubernetes `PersistentVolumeClaim` (PVC) bound to an AWS Elastic Block Store (EBS) `gp2` volume to guarantee zero data loss across pod restarts.
-2. **InitContainer Dependency Synchronization**:
+1. **Passwordless AWS OIDC Authentication**:
+   - Zero hardcoded or static AWS access keys (`AKIA...`). CI/CD workflows dynamically assume an IAM role via OpenID Connect (OIDC) federated authentication with AWS Security Token Service (STS) and cryptographic token exchange (`token.actions.githubusercontent.com`).
+2. **Terraform Infrastructure as Code with Remote State Locking**:
+   - Full modular IaC (`variables.tf`, `outputs.tf`, `terraform.tfvars.example`, `main.tf`). State is stored remotely in encrypted Amazon S3 (`enterprise-eks-tfstate-851706351853`) with distributed concurrency locking via Amazon DynamoDB (`enterprise-eks-tflocks`).
+3. **Resilience & High Availability (PDB & HPA)**:
+   - Configured `PodDisruptionBudget` (`enterprise-webapp-pdb`) guaranteeing `minAvailable: 1` during node maintenance or Kubernetes rolling upgrades.
+   - Configured `HorizontalPodAutoscaler` (`enterprise-webapp-hpa`) dynamically scaling the Tomcat application tier between 2 and 5 replicas based on real-time CPU (70% target) and memory (80% target) utilization.
+4. **Defense-in-Depth Network Policies**:
+   - Multi-tier `NetworkPolicy` firewall rules restrict intra-cluster ingress traffic: database, cache, and message queue accept ingress strictly from the authenticated application tier; the application tier accepts ingress only from the reverse proxy.
+5. **Container Security & Least Privilege**:
+   - Containers enforce `allowPrivilegeEscalation: false`. Dashboard container runs strictly as non-root (`USER node`, UID 1000) with all Linux capabilities dropped (`drop: ["ALL"]`). `.dockerignore` prevents accidental leakage of build artifacts, credentials, or terraform state into images.
+6. **Multi-Stage CI Testing & DevSecOps Scanning**:
+   - Automated Java unit testing (JUnit 4 + JUnit 5 via `junit-vintage-engine`), JaCoCo code coverage reporting, Checkstyle linting, and advisory OWASP Dependency-Check.
+   - Comprehensive container vulnerability scanning with **Trivy** across all 3 tiers (`enterprise-webapp`, `enterprise-proxy`, `devops-dashboard`) prior to ECR admission.
+7. **InitContainer Dependency Synchronization**:
    - The Java web application uses lightweight `initContainers` (`busybox:1.36`) to actively poll the MySQL (`vprodb:3306`) and Memcached (`vprocache01:11211`) ports before the Tomcat container boots, preventing race conditions during cold starts.
-3. **Decoupled Configuration & Secrets**:
+8. **Decoupled Configuration & Secrets**:
    - Zero hardcoded credentials. Database passwords and RabbitMQ credentials are encrypted in Kubernetes `Secret` resources, while connection endpoints and database names are injected via `ConfigMap`.
-4. **Automated Database Initialization**:
+9. **Automated Database Initialization**:
    - SQL schema and seed data are mounted directly via a Kubernetes `ConfigMap` into `/docker-entrypoint-initdb.d/`, ensuring automatic bootstrapping without manual DB intervention.
-5. **Security Scanning (DevSecOps)**:
-   - Every container image undergoes automated vulnerability scanning via **Trivy** in the CI pipeline before admission to Amazon ECR.
-6. **Graceful Rolling Updates**:
-   - Kubernetes `RollingUpdate` deployment strategy (`maxSurge: 1`, `maxUnavailable: 0`) paired with comprehensive `startupProbe`, `livenessProbe`, and `readinessProbe` ensures zero-downtime releases.
+10. **Graceful Zero-Downtime Rolling Updates**:
+    - Kubernetes `RollingUpdate` deployment strategy (`maxSurge: 1`, `maxUnavailable: 0`) paired with comprehensive `startupProbe`, `livenessProbe`, and `readinessProbe` ensures zero-downtime releases.
 
 ---
 
@@ -65,18 +75,21 @@ flowchart TD
 
 ```text
 Task-Vprofile-EKS/
+├── .dockerignore                # Container build context filtering
+├── .gitignore                   # Version control exclusion rules
+├── README.md                    # Project Architecture & Operations Documentation
 ├── .github/workflows/
-│   └── deploy.yml               # Complete 3-Phase CI/CD Pipeline
+│   └── deploy.yml               # Complete 3-Phase Enterprise CI/CD Pipeline
 ├── app/
 │   ├── pom.xml                  # Maven Project Object Model (Spring 6 / Java 17)
-│   └── src/                     # Java source code, JSP views, resources
+│   └── src/                     # Java source code, JSP views, resources, unit tests
 ├── dashboard/
 │   ├── package.json             # Dashboard service definition
 │   ├── src/server.js            # Node.js metrics collector & dark dashboard UI
 │   └── test/server.test.js      # Automated unit tests
 ├── docker/
 │   ├── app/Dockerfile           # Multi-stage Maven -> Tomcat 10 container
-│   ├── dashboard/Dockerfile     # Hardened Node.js Alpine container
+│   ├── dashboard/Dockerfile     # Hardened Node.js Alpine container (non-root)
 │   └── proxy/                   # Nginx reverse proxy Dockerfile & nginx.conf
 ├── k8s/
 │   ├── 00-namespace.yaml        # Dedicated namespace (enterprise-stack)
@@ -87,12 +100,17 @@ Task-Vprofile-EKS/
 │   ├── 04-db-deployment.yaml    # MySQL 8.0 Deployment & ClusterIP Service
 │   ├── 05-cache-deployment.yaml # Memcached Deployment & ClusterIP Service
 │   ├── 06-rmq-deployment.yaml   # RabbitMQ Deployment & ClusterIP Service
-│   ├── 07-webapp-deployment.yaml# Tomcat Web Application & Probes
+│   ├── 07-webapp-deployment.yaml# Tomcat Web Application (SecurityContext + Probes)
 │   ├── 08-proxy-deployment.yaml # Nginx Reverse Proxy (LoadBalancer Service)
-│   └── 09-dashboard-deployment.yaml # DevOps Dashboard (LoadBalancer Service)
+│   ├── 09-dashboard-deployment.yaml # DevOps Dashboard (Non-Root + LoadBalancer)
+│   ├── 10-pdb.yaml              # PodDisruptionBudget (minAvailable: 1)
+│   ├── 11-hpa.yaml              # HorizontalPodAutoscaler (CPU & Memory auto-scaling)
+│   └── 12-networkpolicy.yaml    # Multi-tier Network Policies (firewall isolation)
 ├── terraform/
-│   └── main.tf                  # EKS Cluster, Node Group, and 3x ECR Repositories
-└── README.md                    # Project Architecture & Operations Documentation
+│   ├── main.tf                  # EKS Cluster, Node Group, and 3x ECR Repositories
+│   ├── variables.tf             # Input variables & parameter validation
+│   ├── outputs.tf               # Infrastructure outputs (endpoints, ARNs, kubeconfig)
+│   └── terraform.tfvars.example # Example variable definitions for reproduction
 ```
 
 ---

@@ -35,6 +35,8 @@ spec:
         - name: webapp
           image: <WEBAPP_IMAGE>
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 8080
               name: http
