@@ -82,12 +82,22 @@
             font-weight: 600;
             color: #f8fafc;
         }
-        .btn-back {
+        .btn-back-dir {
             background: #334155;
             color: #f8fafc !important;
             padding: 8px 18px;
             border-radius: 6px;
             font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none !important;
+            margin-right: 8px;
+        }
+        .btn-back-dash {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: #ffffff !important;
+            padding: 8px 18px;
+            border-radius: 6px;
+            font-weight: 700;
             font-size: 0.85rem;
             text-decoration: none !important;
         }
@@ -97,7 +107,7 @@
     <nav class="navbar navbar-custom" role="navigation">
         <div class="container-fluid" style="max-width: 1300px;">
             <div class="navbar-header">
-                <a class="navbar-brand" href="${contextPath}/">
+                <a class="navbar-brand" href="${contextPath}/welcome">
                     <img src="${contextPath}/resources/Images/user/logo.png" width="30" height="30" style="border-radius:6px;">
                     Enterprise CloudOps
                 </a>
@@ -105,7 +115,7 @@
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-right">
                     <li><a href="${contextPath}/users"><i class="fa fa-users"></i> All Users</a></li>
-                    <li><a href="${contextPath}/"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+                    <li><a href="${contextPath}/welcome"><i class="fa fa-dashboard"></i> Back to Dashboard</a></li>
                 </ul>
             </div>
         </div>
@@ -121,7 +131,8 @@
                     <p style="margin:0; color:#94a3b8; font-size:0.9rem;">Internal database record telemetry ID #${user.id}</p>
                 </div>
                 <div>
-                    <a href="${contextPath}/users" class="btn-back"><i class="fa fa-arrow-left"></i> Back to Directory</a>
+                    <a href="${contextPath}/users" class="btn-back-dir"><i class="fa fa-arrow-left"></i> Directory</a>
+                    <a href="${contextPath}/welcome" class="btn-back-dash"><i class="fa fa-dashboard"></i> Dashboard</a>
                 </div>
             </div>
 

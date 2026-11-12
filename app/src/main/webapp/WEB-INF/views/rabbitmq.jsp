@@ -127,7 +127,7 @@
             </div>
 
             <div style="text-align:center; margin-top:24px;">
-                <a href="${contextPath}/" class="btn-portal"><i class="fa fa-arrow-left"></i> Return to CloudOps Portal</a>
+                <a href="${contextPath}/welcome" class="btn-portal"><i class="fa fa-arrow-left"></i> Return to CloudOps Portal</a>
             </div>
         </div>
     </div>

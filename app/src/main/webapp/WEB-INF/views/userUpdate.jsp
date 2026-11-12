@@ -122,7 +122,7 @@
 
             <div class="form-group" style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #1e293b;">
                 <div class="col-md-12 text-right">
-                    <a href="${contextPath}/" class="btn-cancel">Cancel</a>
+                    <a href="${contextPath}/welcome" class="btn-cancel">Cancel</a>
                     <button type="submit" class="btn btn-save"><i class="fa fa-save"></i> Save Changes</button>
                 </div>
             </div>

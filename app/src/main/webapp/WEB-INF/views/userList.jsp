@@ -102,13 +102,21 @@
             color: #0b1120 !important;
         }
         .btn-back {
-            background: #334155;
-            color: #f8fafc !important;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85rem;
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            color: #ffffff !important;
+            padding: 9px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.88rem;
             text-decoration: none !important;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .btn-back:hover {
+            opacity: 0.95;
+            color: #ffffff !important;
         }
     </style>
 </head>
@@ -116,14 +124,14 @@
     <nav class="navbar navbar-custom" role="navigation">
         <div class="container-fluid" style="max-width: 1300px;">
             <div class="navbar-header">
-                <a class="navbar-brand" href="${contextPath}/">
+                <a class="navbar-brand" href="${contextPath}/welcome">
                     <img src="${contextPath}/resources/Images/user/logo.png" width="30" height="30" style="border-radius:6px;">
                     Enterprise CloudOps
                 </a>
             </div>
             <div class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-right">
-                    <li><a href="${contextPath}/"><i class="fa fa-dashboard"></i> Dashboard</a></li>
+                    <li><a href="${contextPath}/welcome"><i class="fa fa-dashboard"></i> Back to Dashboard</a></li>
                 </ul>
             </div>
         </div>
@@ -137,7 +145,7 @@
                     <p style="margin:0; color:#94a3b8; font-size:0.9rem;">Authenticated records retrieved from Amazon RDS / MySQL Cluster</p>
                 </div>
                 <div>
-                    <a href="${contextPath}/" class="btn-back"><i class="fa fa-arrow-left"></i> Back to Dashboard</a>
+                    <a href="${contextPath}/welcome" class="btn-back"><i class="fa fa-arrow-left"></i> Back to Dashboard</a>
                 </div>
             </div>
 

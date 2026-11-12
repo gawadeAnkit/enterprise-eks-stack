@@ -263,7 +263,7 @@
                 <span class="icon-bar" style="background:#cbd5e1"></span>
                 <span class="icon-bar" style="background:#cbd5e1"></span>
             </button>
-            <a class="navbar-brand" href="${contextPath}/">
+            <a class="navbar-brand" href="${contextPath}/welcome">
                 <img alt="Brand" src="${contextPath}/resources/Images/user/logo.png" width="32" height="32">
                 <span>Enterprise CloudOps</span>
             </a>
